@@ -77,14 +77,41 @@ button{transition:.18s ease;box-shadow:0 1px 1px #0000000a}button:hover{transfor
   .main{padding-left:22px !important;padding-right:28px !important}
 }
 
-/* ===== FINAL SIDEBAR-TO-CONTENT FIX =====
-   The dashboard uses CSS Grid, so the old fixed-sidebar margin must be removed.
-   This makes the white content area start immediately after the sidebar. */
-@media (min-width:781px){
-  .main{
-    margin-left:0 !important;
+/* ============================================================
+   CBTPro FINAL LAYOUT — SIDEBAR & CONTENT MUST TOUCH
+   ============================================================ */
+@media (min-width: 781px){
+  html body #app .layout{
+    display:grid !important;
+    grid-template-columns:258px minmax(0,1fr) !important;
+    gap:0 !important;
+    width:100% !important;
+    margin:0 !important;
+  }
+
+  html body #app .layout > .side{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    width:258px !important;
+    min-width:258px !important;
+    margin:0 !important;
+    position:sticky !important;
+    left:auto !important;
+    box-sizing:border-box !important;
+  }
+
+  html body #app .layout > .main{
+    grid-column:2 !important;
+    grid-row:1 !important;
     width:auto !important;
+    min-width:0 !important;
+    margin:0 !important;
     padding-left:0 !important;
-    padding-right:28px !important;
+    box-sizing:border-box !important;
+  }
+
+  html body #app .layout > .main > .top,
+  html body #app .layout > .main > #content{
+    margin-left:0 !important;
   }
 }
