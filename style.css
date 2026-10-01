@@ -151,3 +151,16 @@ button{transition:.18s ease;box-shadow:0 1px 1px #0000000a}button:hover{transfor
     column-gap:0 !important;
   }
 }
+
+\n/* CBTPro Fast Navigation */
+.page-loading{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted,#64748b)}
+.page-loading b{color:inherit;font-size:15px}
+.page-loading span{font-size:12px}
+.loading-spinner{width:26px;height:26px;border:3px solid rgba(100,116,139,.18);border-top-color:currentColor;border-radius:50%;animation:cbtspin .7s linear infinite}
+@keyframes cbtspin{to{transform:rotate(360deg)}}
+
+.soft-loading{font-size:12px;color:var(--muted,#64748b);opacity:.8}.page-content>.card{min-height:120px}
+
+.page-loading{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted,#64748b)}.page-loading small{font-size:12px}.loading-spinner{width:26px;height:26px;border:3px solid rgba(100,116,139,.18);border-top-color:currentColor;border-radius:50%;animation:cbtspin .7s linear infinite}@keyframes cbtspin{to{transform:rotate(360deg)}}
+
+.import-btn{background:#2563eb;color:#fff}.import-progress{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin:18px 0}.import-progress div{height:100%;width:0;background:#2563eb;transition:width .2s ease}
