@@ -1,7 +1,13 @@
-/* CBTPro Dashboard V2 — 2026-10-01 */
+/* CBTPro Dashboard V2 — FIX NAVIGATION 2026-10-01 BUILD-03 */
 
 const $=s=>document.querySelector(s), app=$("#app");
-if(!document.getElementById("cbt-fast-nav-style")){const st=document.createElement("style");st.id="cbt-fast-nav-style";st.textContent="@keyframes cbtSpin{to{transform:rotate(360deg)}}";document.head.appendChild(st)}
+function bootError(e){
+  const msg=e&&e.stack?e.stack:(e&&e.message?e.message:String(e));
+  if(app) app.innerHTML=`<div style="font-family:Arial,sans-serif;padding:24px;max-width:900px;margin:30px auto"><h2 style="margin:0 0 10px">CBTPro gagal dimuat</h2><p style="color:#b91c1c;white-space:pre-wrap;background:#fff1f2;padding:14px;border-radius:10px">${esc(msg)}</p><p>Jika pesan ini muncul, kirim screenshot bagian merah ini kepada saya.</p></div>`;
+  console.error("CBTPro boot error:",e);
+}
+window.addEventListener("error",e=>{if(e.error)bootError(e.error)});
+window.addEventListener("unhandledrejection",e=>bootError(e.reason));
 let session=null, examState=null;
 try{session=JSON.parse(localStorage.getItem("cbt_session")||"null")}catch(e){localStorage.removeItem("cbt_session");session=null}
 async function api(action,data={}){const res=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,...data,...(session?{role:session.role,user_id:session.id}: {})})});const x=await res.json();if(!x.ok)throw new Error(x.error||"Terjadi kesalahan");return x}
@@ -20,7 +26,7 @@ async function page(p){
   const c=$('#content');
   if(!c)return;
   c.className='page-content';
-  c.innerHTML='<div class="page-loading" style="display:flex;align-items:center;justify-content:center;gap:10px;min-height:180px;opacity:.7"><span style="width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:cbtSpin .65s linear infinite"></span><span>Memuat '+esc(p)+'…</span></div>';
+  c.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;min-height:140px;opacity:.65">Memuat ${esc(p)}…</div>`;
   try{
     if(p==='Dashboard'){
       const [x,u]=await Promise.all([api('dashboard'),api('listUjian')]);
@@ -38,10 +44,7 @@ async function page(p){
         <button class="action-card" onclick="page('Analisis Soal')"><span class="action-icon orange">◫</span><span><b>Analisis Soal</b><small>Analisis otomatis</small></span><i>→</i></button>`;
       const examRows=exams.slice(0,6).map(e=>`<div class="exam-row"><div class="exam-badge">▣</div><div class="exam-info"><b>${esc(e.nama||'Ujian')}</b><small>Kode ${esc(e.kode_ujian||'-')} · ${esc(e.durasi_menit||0)} menit</small></div><span class="status-dot ${String(e.status||'').toUpperCase()==='AKTIF'?'on':'off'}">${esc(e.status||'DRAFT')}</span><button class="row-arrow" onclick="page('Ujian')">→</button></div>`).join('') || `<div class="empty-state">Belum ada ujian.</div>`;
       c.innerHTML=`
-        <div class="dash-hero">
-          <div class="hero-copy-dash"><div class="eyebrow">OVERVIEW</div><h2>Selamat datang, ${esc(session.nama||'Pengguna')} 👋</h2><p>Pantau aktivitas ujian dan kelola kebutuhan CBT Anda dari satu tempat.</p><div class="hero-meta"><span>● Sistem online</span><span>•</span><span>${role==='ADMIN'?'Administrator':role==='PROKTOR'?'Proktor Ujian':'Peserta Ujian'}</span></div></div>
-          <div class="hero-illustration"><div class="hero-ring r1"></div><div class="hero-ring r2"></div><div class="hero-device"><div class="device-bar"></div><div class="device-lines"><span></span><span></span><span></span></div><div class="device-chart"><i></i><i></i><i></i><i></i><i></i></div></div></div>
-        </div>
+        <div class="dash-hero"><div class="hero-copy-dash"><div class="eyebrow">OVERVIEW</div><h2>Selamat datang, ${esc(session.nama||'Pengguna')} 👋</h2><p>Pantau aktivitas ujian dan kelola kebutuhan CBT Anda dari satu tempat.</p><div class="hero-meta"><span>● Sistem online</span><span>•</span><span>${role==='ADMIN'?'Administrator':role==='PROKTOR'?'Proktor Ujian':'Peserta Ujian'}</span></div></div><div class="hero-illustration"><div class="hero-ring r1"></div><div class="hero-ring r2"></div><div class="hero-device"><div class="device-bar"></div><div class="device-lines"><span></span><span></span><span></span></div><div class="device-chart"><i></i><i></i><i></i><i></i><i></i></div></div></div></div>
         <div class="section-title"><div><h3>Ringkasan</h3><p>Data terkini dari sistem Anda</p></div></div>
         <div class="overview-grid">
           <div class="overview-card"><div class="oc-top"><span class="oc-icon blue">♟</span><span class="oc-trend">AKTIF</span></div><strong>${x.stats.siswa}</strong><b>Total Siswa</b><small>Peserta terdaftar</small></div>
@@ -49,12 +52,8 @@ async function page(p){
           <div class="overview-card"><div class="oc-top"><span class="oc-icon green">✓</span><span class="oc-trend">DATA</span></div><strong>${x.stats.hasil}</strong><b>Hasil Tersimpan</b><small>Rekap pengerjaan</small></div>
           <div class="overview-card"><div class="oc-top"><span class="oc-icon orange">◫</span><span class="oc-trend">LIVE</span></div><strong>${active}</strong><b>Ujian Aktif</b><small>Siap digunakan</small></div>
         </div>
-        <div class="dashboard-columns">
-          <div class="panel-card"><div class="panel-head"><div><h3>Ujian Terbaru</h3><p>Daftar ujian yang tersedia di akun Anda</p></div><button class="text-btn" onclick="page('Ujian')">Lihat semua →</button></div><div class="exam-list">${examRows}</div></div>
-          <div class="panel-card"><div class="panel-head"><div><h3>Aksi Cepat</h3><p>Akses menu yang sering digunakan</p></div></div><div class="action-list">${quick}</div></div>
-        </div>`;
-    }
-    else if(p==='Akun Proktor'){await accounts(c,'PROKTOR');}
+        <div class="dashboard-columns"><div class="panel-card"><div class="panel-head"><div><h3>Ujian Terbaru</h3><p>Daftar ujian yang tersedia di akun Anda</p></div><button class="text-btn" onclick="page('Ujian')">Lihat semua →</button></div><div class="exam-list">${examRows}</div></div><div class="panel-card"><div class="panel-head"><div><h3>Aksi Cepat</h3><p>Akses menu yang sering digunakan</p></div></div><div class="action-list">${quick}</div></div></div>`;
+    } else if(p==='Akun Proktor'){await accounts(c,'PROKTOR');}
     else if(p==='Akun Siswa'||p==='Data Siswa'){await accounts(c,'SISWA');}
     else if(p==='Ujian'){await ujian(c);}
     else if(p==='Soal'){await soal(c);}
@@ -62,7 +61,7 @@ async function page(p){
     else if(p==='Hasil'){await results(c);}
     if(seq!==navSeq)return;
   }catch(e){
-    if(seq===navSeq)c.innerHTML=`<div class="card notice">${esc(e.message)}</div>`;
+    if(seq===navSeq)c.innerHTML=`<div class="card notice">${esc(e.message||e)}</div>`;
   }
 }
 async function accounts(c,type){const x=await api("listAccounts");const data=type==="PROKTOR"?x.proktor:x.siswa;c.innerHTML=`<div class="card"><div class="top"><h3>${type==="PROKTOR"?"Akun Proktor":"Data Siswa"}</h3><button onclick="accountForm('${type}')">+ Tambah</button></div><table class="table"><thead><tr><th>Nama</th><th>Username</th><th>${type==="PROKTOR"?"Kode":"NIS"}</th><th>Aksi</th></tr></thead><tbody>${data.map(a=>`<tr><td>${esc(a.nama)}</td><td>${esc(a.username)}</td><td>${esc(type==="PROKTOR"?a.kode_proktor:a.nis)}</td><td class="actions"><button onclick='accountForm(${JSON.stringify(type)},${JSON.stringify(a)})'>Edit</button><button class="danger" onclick="delAccount('${type}','${a.id}')">Hapus</button></td></tr>`).join("")}</tbody></table></div>`}
@@ -71,24 +70,12 @@ async function delAccount(type,id){if(confirm("Hapus akun?")){try{await api("del
 async function ujian(c){const x=await api("listUjian");c.innerHTML=`<div class="card"><div class="top"><h3>Ujian</h3><button onclick="examForm()">+ Buat Ujian</button></div><table class="table"><tr><th>Nama</th><th>Kode</th><th>Durasi</th><th>Status</th><th>Aksi</th></tr>${x.data.map(u=>`<tr><td>${esc(u.nama)}</td><td><b>${esc(u.kode_ujian)}</b></td><td>${u.durasi_menit} menit</td><td><span class="pill">${esc(u.status)}</span></td><td class="actions"><button onclick='examForm(${JSON.stringify(u)})'>Edit</button><button onclick="openSoal('${u.kode_ujian}')">Soal</button><button onclick="openAnalysis('${u.kode_ujian}')">Analisis</button><button class="danger" onclick="delExam('${u.id}')">Hapus</button></td></tr>`).join("")}</table></div>`}
 async function examForm(a={}){const box=document.createElement("div");box.className="card";box.style="position:fixed;inset:10% 15%;z-index:9";box.innerHTML=`<h3>${a.id?"Edit":"Buat"} Ujian</h3><div class="field"><label>Nama ujian</label><input id="n" value="${esc(a.nama)}"></div><div class="field"><label>Kode (kosong = otomatis)</label><input id="k" value="${esc(a.kode_ujian)}"></div><div class="field"><label>Durasi menit</label><input id="d" type="number" value="${a.durasi_menit||60}"></div><div class="field"><label>Acak soal</label><select id="as"><option ${a.acak_soal==="YA"?"selected":""}>TIDAK</option><option ${a.acak_soal==="YA"?"selected":""}>YA</option></select></div><div class="field"><label>Acak pilihan</label><select id="ap"><option>TIDAK</option><option ${a.acak_pilihan==="YA"?"selected":""}>YA</option></select></div><div class="field"><label>Status</label><select id="st"><option>AKTIF</option><option ${a.status==="NONAKTIF"?"selected":""}>NONAKTIF</option></select></div><div class="actions"><button id="save">Simpan</button><button onclick="this.closest('.card').remove()">Batal</button></div>`;document.body.appendChild(box);$("#save").onclick=async()=>{try{await api("saveUjian",{id:a.id,nama:$("#n").value,kode_ujian:$("#k").value,durasi_menit:$("#d").value,acak_soal:$("#as").value,acak_pilihan:$("#ap").value,status:$("#st").value});box.remove();page("Ujian")}catch(e){alert(e.message)}}}
 async function delExam(id){if(confirm("Hapus ujian?")){await api("deleteUjian",{id});page("Ujian")}}
-async function openSoal(k){
-  await page("Soal");
-  const sel=$("#sel");
-  if(sel){sel.value=k;await loadSoal(k)}
-}
+async function openSoal(k){await page("Soal");const s=$("#sel");if(s){s.value=k;await loadSoal(k)}}
 async function soal(c){const u=await api("listUjian");c.innerHTML=`<div class="card"><div class="top"><div><h3>Bank Soal</h3><div class="muted">Tambah satuan atau impor massal dari Excel/Spreadsheet</div></div><div class="actions"><button class="secondary" onclick="downloadSoalTemplate()">Template Excel</button><button onclick="showImportGuide()">Cara Import</button></div></div><div class="field"><label>Pilih ujian</label><select id="sel"><option value="">-- pilih --</option>${u.data.map(x=>`<option value="${x.kode_ujian}">${esc(x.nama)} (${esc(x.kode_ujian)})</option>`).join("")}</select></div><div id="sq"></div></div>`;$("#sel").onchange=()=>loadSoal($("#sel").value)}
 async function loadSoal(k){if(!k)return;const q=await api("listSoal",{kode_ujian:k});$("#sq").innerHTML=`<div class="top"><b>${q.data.length} soal</b><button onclick="addQuestion('${k}')">+ Tambah Soal</button></div><table class="table"><tr><th>No</th><th>Soal</th><th>Kunci</th></tr>${q.data.map(s=>`<tr><td>${s.nomor}</td><td>${esc(String(s.soal).slice(0,100))}</td><td>${esc(s.jawaban)}</td></tr>`).join("")}</table><div class="notice">Untuk impor massal, isi sheet SOAL sesuai header yang tersedia. Gambar dapat berupa URL gambar publik.</div>`}
 async function addQuestion(k){const box=document.createElement("div");box.className="card";box.style="position:fixed;inset:5% 8%;z-index:9;overflow:auto";box.innerHTML=`<h3>Tambah Soal</h3><div class="field"><label>Nomor</label><input id="no" type="number"></div><div class="field"><label>Soal</label><textarea id="q" rows="4"></textarea></div><div class="field"><label>URL gambar soal</label><input id="qi"></div>${["A","B","C","D","E"].map(x=>`<div class="field"><label>Pilihan ${x}</label><input id="${x}"><label>URL gambar ${x}</label><input id="${x}i"></div>`).join("")}<div class="field"><label>Kunci</label><select id="key">${["A","B","C","D","E"].map(x=>`<option>${x}</option>`).join("")}</select></div><button id="save">Simpan</button> <button onclick="this.closest('.card').remove()">Batal</button>`;document.body.appendChild(box);$("#save").onclick=async()=>{const d={kode_ujian:k,nomor:$("#no").value,soal:$("#q").value,gambar_soal:$("#qi").value,jawaban:$("#key").value,bobot:1};["A","B","C","D","E"].forEach(x=>{d[x]=$( "#"+x).value;d["gambar_"+x]=$( "#"+x+"i").value});try{await api("saveSoal",d);box.remove();loadSoal(k)}catch(e){alert(e.message)}}}
 async function analysis(c,k){const u=await api("listUjian");c.innerHTML=`<div class="card"><h3>Analisis Soal Otomatis</h3><div class="field"><select id="sel"><option value="">Pilih ujian</option>${u.data.map(x=>`<option value="${x.kode_ujian}">${esc(x.nama)}</option>`).join("")}</select></div><div id="an"></div></div>`;$("#sel").onchange=()=>openAnalysis($("#sel").value)}
-async function openAnalysis(k){
-  await page("Analisis Soal");
-  const sel=$("#sel");
-  if(sel){
-    sel.value=k;
-    const x=await api("analysis",{kode_ujian:k});
-    renderAnalysis(x);
-  }
-}
+async function openAnalysis(k){await page("Analisis Soal");const s=$("#sel");if(s){s.value=k;const x=await api("analysis",{kode_ujian:k});renderAnalysis(x)}}
 async function renderAnalysis(x){const a=$("#an");a.innerHTML=`<div class="grid"><div class="card stat">Peserta<strong>${x.summary.peserta}</strong></div><div class="card stat">Selesai<strong>${x.summary.selesai}</strong></div><div class="card stat">Rata-rata<strong>${x.summary.rata2}</strong></div><div class="card stat">Tertinggi<strong>${x.summary.tertinggi}</strong></div><div class="card stat">Terendah<strong>${x.summary.terendah}</strong></div></div><br><table class="table"><tr><th>No</th><th>Benar</th><th>Salah</th><th>Kosong</th><th>% Benar</th><th>Tingkat</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr>${x.detail.map(d=>`<tr><td>${d.nomor}</td><td>${d.benar}</td><td>${d.salah}</td><td>${d.kosong}</td><td>${d.persen_benar}%</td><td><span class="pill">${d.tingkat}</span></td><td>${d.pilihan.A}</td><td>${d.pilihan.B}</td><td>${d.pilihan.C}</td><td>${d.pilihan.D}</td><td>${d.pilihan.E}</td></tr>`).join("")}</table>`}
 async function results(c){const u=await api("listUjian");c.innerHTML=`<div class="card"><h3>Hasil Ujian</h3><div class="field"><select id="sel"><option value="">Pilih ujian</option>${u.data.map(x=>`<option value="${x.kode_ujian}">${esc(x.nama)}</option>`).join("")}</select></div><div id="rs"></div></div>`;$("#sel").onchange=async()=>{const x=await api("results",{kode_ujian:$("#sel").value});$("#rs").innerHTML=`<table class="table"><tr><th>Nama</th><th>Benar</th><th>Salah</th><th>Kosong</th><th>Nilai</th><th>Status</th></tr>${x.data.map(d=>`<tr><td>${esc(d.nama)}</td><td>${d.benar}</td><td>${d.salah}</td><td>${d.kosong}</td><td><b>${d.nilai}</b></td><td>${d.status}</td></tr>`).join("")}</table>`}}
 async function renderStudent(){
