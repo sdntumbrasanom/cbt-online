@@ -1,3 +1,4 @@
+/* CBTPro Dashboard V2 — 2026-10-01 */
 
 const $=s=>document.querySelector(s), app=$("#app");
 let session=JSON.parse(localStorage.getItem("cbt_session")||"null"), examState=null;
