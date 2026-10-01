@@ -123,7 +123,7 @@ async function ujian(c,seq){const x=await cached("listUjian");if(seq!==navSeq)re
 async function examForm(a={}){const box=document.createElement("div");box.className="card";box.style="position:fixed;inset:10% 15%;z-index:9";box.innerHTML=`<h3>${a.id?"Edit":"Buat"} Ujian</h3><div class="field"><label>Nama ujian</label><input id="n" value="${esc(a.nama)}"></div><div class="field"><label>Kode (kosong = otomatis)</label><input id="k" value="${esc(a.kode_ujian)}"></div><div class="field"><label>Durasi menit</label><input id="d" type="number" value="${a.durasi_menit||60}"></div><div class="field"><label>Acak soal</label><select id="as"><option ${a.acak_soal==="YA"?"selected":""}>TIDAK</option><option ${a.acak_soal==="YA"?"selected":""}>YA</option></select></div><div class="field"><label>Acak pilihan</label><select id="ap"><option>TIDAK</option><option ${a.acak_pilihan==="YA"?"selected":""}>YA</option></select></div><div class="field"><label>Status</label><select id="st"><option>AKTIF</option><option ${a.status==="NONAKTIF"?"selected":""}>NONAKTIF</option></select></div><div class="actions"><button id="save">Simpan</button><button onclick="this.closest('.card').remove()">Batal</button></div>`;document.body.appendChild(box);$("#save").onclick=async()=>{try{await api("saveUjian",{id:a.id,nama:$("#n").value,kode_ujian:$("#k").value,durasi_menit:$("#d").value,acak_soal:$("#as").value,acak_pilihan:$("#ap").value,status:$("#st").value});invalidate("listUjian","dashboard");box.remove();page("Ujian")}catch(e){alert(e.message)}}}
 async function delExam(id){if(confirm("Hapus ujian?")){await api("deleteUjian",{id});invalidate("listUjian","dashboard");page("Ujian")}}
 function openSoal(k){page("Soal");requestAnimationFrame(()=>loadSoal(k))}
-async function soal(c,seq){const u=await cached("listUjian");if(seq!==navSeq)return;c.innerHTML=`<div class="card"><div class="top"><div><h3>Bank Soal</h3><div class="muted">Tambah satuan atau impor massal dari Excel/Spreadsheet</div></div><div class="actions"><button class="secondary" onclick="downloadSoalTemplate()">Template Excel</button><button onclick="showImportGuide()">Cara Import</button></div></div><div class="field"><label>Pilih ujian</label><select id="sel"><option value="">-- pilih --</option>${u.data.map(x=>`<option value="${x.kode_ujian}">${esc(x.nama)} (${esc(x.kode_ujian)})</option>`).join("")}</select></div><div id="sq"></div></div>`;$("#sel").onchange=()=>loadSoal($("#sel").value)}
+async function soal(c,seq){const u=await cached("listUjian");if(seq!==navSeq)return;c.innerHTML=`<div class="card"><div class="top"><div><h3>Bank Soal</h3><div class="muted">Tambah satuan atau impor massal dari Excel/Spreadsheet</div></div><div class="actions"><button class="secondary" onclick="downloadSoalTemplate()">Template Excel</button><button onclick="document.getElementById('bulkSoalFile').click()">⬆ Upload Soal Banyak</button><button onclick="showImportGuide()">Cara Import</button><input id="bulkSoalFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="uploadSoalBanyak(this)"></div></div><div class="field"><label>Pilih ujian</label><select id="sel"><option value="">-- pilih --</option>${u.data.map(x=>`<option value="${x.kode_ujian}">${esc(x.nama)} (${esc(x.kode_ujian)})</option>`).join("")}</select></div><div id="sq"></div></div>`;$("#sel").onchange=()=>loadSoal($("#sel").value)}
 async function loadSoal(k){if(!k)return;const q=await api("listSoal",{kode_ujian:k});$("#sq").innerHTML=`<div class="top"><b>${q.data.length} soal</b><button onclick="addQuestion('${k}')">+ Tambah Soal</button></div><table class="table"><tr><th>No</th><th>Soal</th><th>Kunci</th></tr>${q.data.map(s=>`<tr><td>${s.nomor}</td><td>${esc(String(s.soal).slice(0,100))}</td><td>${esc(s.jawaban)}</td></tr>`).join("")}</table><div class="notice">Untuk impor massal, isi sheet SOAL sesuai header yang tersedia. Gambar dapat berupa URL gambar publik.</div>`}
 async function addQuestion(k){const box=document.createElement("div");box.className="card";box.style="position:fixed;inset:5% 8%;z-index:9;overflow:auto";box.innerHTML=`<h3>Tambah Soal</h3><div class="field"><label>Nomor</label><input id="no" type="number"></div><div class="field"><label>Soal</label><textarea id="q" rows="4"></textarea></div><div class="field"><label>URL gambar soal</label><input id="qi"></div>${["A","B","C","D","E"].map(x=>`<div class="field"><label>Pilihan ${x}</label><input id="${x}"><label>URL gambar ${x}</label><input id="${x}i"></div>`).join("")}<div class="field"><label>Kunci</label><select id="key">${["A","B","C","D","E"].map(x=>`<option>${x}</option>`).join("")}</select></div><button id="save">Simpan</button> <button onclick="this.closest('.card').remove()">Batal</button>`;document.body.appendChild(box);$("#save").onclick=async()=>{const d={kode_ujian:k,nomor:$("#no").value,soal:$("#q").value,gambar_soal:$("#qi").value,jawaban:$("#key").value,bobot:1};["A","B","C","D","E"].forEach(x=>{d[x]=$( "#"+x).value;d["gambar_"+x]=$( "#"+x+"i").value});try{await api("saveSoal",d);box.remove();loadSoal(k)}catch(e){alert(e.message)}}}
 async function analysis(c,k,seq){const u=await cached("listUjian");if(seq!==navSeq)return;c.innerHTML=`<div class="card"><h3>Analisis Soal Otomatis</h3><div class="field"><select id="sel"><option value="">Pilih ujian</option>${u.data.map(x=>`<option value="${x.kode_ujian}">${esc(x.nama)}</option>`).join("")}</select></div><div id="an"></div></div>`;$("#sel").onchange=()=>openAnalysis($("#sel").value)}
@@ -213,6 +213,56 @@ async function submit(force){
  try{
   const x=await api("submitExam",{kode_ujian:examState.ujian.kode_ujian,mulai:examState.start});
   app.innerHTML=`<div class="result-screen"><div class="result-card card"><div class="result-icon">✓</div><h1>Ujian selesai</h1><p class="muted">${esc(examState.ujian.nama)}</p><div class="score">${x.hasil.nilai}</div><div class="result-grid"><div><b>${x.hasil.benar}</b><span>Benar</span></div><div><b>${x.hasil.salah}</b><span>Salah</span></div><div><b>${x.hasil.kosong}</b><span>Kosong</span></div></div><button onclick="renderStudent()">Kembali</button></div></div>`;
+ }catch(e){alert(e.message)}
+}
+
+async function loadXLSX(){
+ if(window.XLSX)return window.XLSX;
+ if(window._xlsxLoading)return window._xlsxLoading;
+ window._xlsxLoading=new Promise((resolve,reject)=>{
+  const sc=document.createElement("script");
+  sc.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+  sc.onload=()=>resolve(window.XLSX); sc.onerror=()=>reject(new Error("Library Excel gagal dimuat. Coba gunakan CSV."));
+  document.head.appendChild(sc);
+ });
+ return window._xlsxLoading;
+}
+function csvRows(text){
+ const rows=[];let row=[],cell="",q=false;
+ for(let i=0;i<text.length;i++){const ch=text[i],nx=text[i+1];
+  if(ch==='"'){if(q&&nx==='"'){cell+='"';i++}else q=!q}
+  else if(ch===','&&!q){row.push(cell);cell=""}
+  else if((ch==='\n'||ch==='\r')&&!q){if(ch==='\r'&&nx==='\n')i++;row.push(cell);cell="";if(row.some(v=>String(v).trim()!=="")){rows.push(row)}row=[]}
+  else cell+=ch;
+ }
+ if(cell!==""||row.length){row.push(cell);if(row.some(v=>String(v).trim()!==""))rows.push(row)}
+ return rows;
+}
+async function uploadSoalBanyak(input){
+ const file=input.files&&input.files[0]; input.value="";
+ if(!file)return;
+ const kode=$("#sel")?.value;
+ if(!kode){alert("Pilih ujian terlebih dahulu.");return}
+ try{
+  let matrix;
+  if(/\.csv$/i.test(file.name)) matrix=csvRows(await file.text());
+  else {const XLSX=await loadXLSX();const data=await file.arrayBuffer();const wb=XLSX.read(data,{type:"array"});const ws=wb.Sheets[wb.SheetNames[0]];matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});}
+  if(!matrix||matrix.length<2)throw new Error("File tidak berisi data soal.");
+  const headers=matrix[0].map(v=>String(v||"").trim().toLowerCase());
+  const idx=n=>headers.indexOf(n);
+  const required=["soal","A","B","C","D","E","jawaban"].filter(n=>idx(n)<0);
+  if(required.length)throw new Error("Kolom wajib belum ada: "+required.join(", "));
+  const rows=matrix.slice(1).filter(r=>String(r[idx("soal")]||"").trim()).map((r,i)=>{
+   const g=n=>idx(n)>=0?String(r[idx(n)]??"").trim():"";
+   return {id:g("id"),kode_ujian:kode,nomor:g("nomor")||String(i+1),soal:g("soal"),gambar_soal:g("gambar_soal"),A:g("A"),gambar_A:g("gambar_A"),B:g("B"),gambar_B:g("gambar_B"),C:g("C"),gambar_C:g("gambar_C"),D:g("D"),gambar_D:g("gambar_D"),E:g("E"),gambar_E:g("gambar_E"),jawaban:g("jawaban").toUpperCase(),bobot:Number(g("bobot"))||1};
+  });
+  const bad=rows.findIndex(r=>!/[ABCDE]/.test(r.jawaban));
+  if(bad>=0)throw new Error(`Kunci jawaban baris ${bad+2} harus A, B, C, D, atau E.`);
+  const box=document.createElement("div");box.className="modal";box.innerHTML=`<div class="modal-box card"><h3>Upload Soal Banyak</h3><p id="bulkStatus">Menyiapkan ${rows.length} soal…</p><div class="progress"><div id="bulkBar" style="width:0%"></div></div><button id="bulkClose" style="display:none" onclick="this.closest('.modal').remove()">Tutup</button></div>`;document.body.appendChild(box);
+  const status=$("#bulkStatus"),bar=$("#bulkBar");
+  const batch=40;let done=0;
+  for(let i=0;i<rows.length;i+=batch){const part=rows.slice(i,i+batch);const x=await api("importSoal",{kode_ujian:kode,rows:part});done+=part.length;const pct=Math.round(done/rows.length*100);status.textContent=`Mengupload ${done} dari ${rows.length} soal…`;bar.style.width=pct+"%";}
+  status.textContent=`✓ Berhasil mengupload ${rows.length} soal.`;$("#bulkClose").style.display="inline-flex";invalidate("listUjian");await loadSoal(kode);
  }catch(e){alert(e.message)}
 }
 
