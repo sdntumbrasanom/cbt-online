@@ -76,3 +76,15 @@ button{transition:.18s ease;box-shadow:0 1px 1px #0000000a}button:hover{transfor
 @media (min-width:781px){
   .main{padding-left:22px !important;padding-right:28px !important}
 }
+
+/* ===== FINAL SIDEBAR-TO-CONTENT FIX =====
+   The dashboard uses CSS Grid, so the old fixed-sidebar margin must be removed.
+   This makes the white content area start immediately after the sidebar. */
+@media (min-width:781px){
+  .main{
+    margin-left:0 !important;
+    width:auto !important;
+    padding-left:0 !important;
+    padding-right:28px !important;
+  }
+}
