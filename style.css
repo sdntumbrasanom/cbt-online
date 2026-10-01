@@ -164,3 +164,11 @@ button{transition:.18s ease;box-shadow:0 1px 1px #0000000a}button:hover{transfor
 .page-loading{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted,#64748b)}.page-loading small{font-size:12px}.loading-spinner{width:26px;height:26px;border:3px solid rgba(100,116,139,.18);border-top-color:currentColor;border-radius:50%;animation:cbtspin .7s linear infinite}@keyframes cbtspin{to{transform:rotate(360deg)}}
 
 .import-btn{background:#2563eb;color:#fff}.import-progress{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin:18px 0}.import-progress div{height:100%;width:0;background:#2563eb;transition:width .2s ease}
+
+.progress{height:10px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin:18px 0}.progress>div{height:100%;background:#2563eb;border-radius:99px;transition:width .2s ease}
+
+/* V8 login full-height hero */
+.login{min-height:100vh;height:100vh;display:grid;grid-template-columns:1.05fr .95fr;padding:0;place-items:stretch;align-items:stretch;background:#fff;}
+.login-art{min-height:100vh;height:100%;align-self:stretch;}
+.login-panel{min-height:100vh;height:100%;}
+@media(max-width:900px){.login{height:auto;min-height:100vh;grid-template-columns:1fr;}.login-art{min-height:52vh;height:auto;padding:40px 28px;}.login-panel{min-height:auto;height:auto;padding:35px 22px;}.hero-copy{margin:60px 0 20px}.hero-copy h1{font-size:42px;}}
