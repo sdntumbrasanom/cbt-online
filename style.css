@@ -100,15 +100,16 @@ button{transition:.18s ease;box-shadow:0 1px 1px #0000000a}button:hover{transfor
     box-sizing:border-box !important;
   }
 
-  html body #app .layout > .main{
+ html body #app .layout > .main{
     grid-column:2 !important;
     grid-row:1 !important;
     width:auto !important;
     min-width:0 !important;
     margin:0 !important;
-    padding-left:0 !important;
+    padding-left:22px !important;
+    padding-right:28px !important;
     box-sizing:border-box !important;
-  }
+}
 
   html body #app .layout > .main > .top,
   html body #app .layout > .main > #content{
