@@ -91,7 +91,7 @@ function page(p){
     else if(p==="Akun Siswa"||p==="Data Siswa")accounts(c,"SISWA",seq);
     else if(p==="Ujian")ujian(c,seq);
     else if(p==="Soal")soal(c,seq);
-    else if(p==="Analisis Soal")analysis(c,seq);
+    else if(p==="Analisis Soal")analysis(c,null,seq);
     else if(p==="Hasil")results(c,seq);
   }catch(e){if(seq===navSeq)c.innerHTML=`<div class="card notice error-notice">${esc(e.message)}</div>`}
 }
@@ -139,20 +139,30 @@ async function deleteSoal(id,k){if(!id)return;if(!confirm("Hapus soal nomor ini?
 async function deleteAllSoal(k){if(!k)return;if(!confirm("Hapus SEMUA soal pada ujian ini? Semua soal akan dihapus dan tidak dapat dikembalikan."))return;const typed=prompt("Untuk konfirmasi, ketik HAPUS SEMUA");if(typed!=="HAPUS SEMUA")return;try{const x=await api("deleteAllSoal",{kode_ujian:k});alert(`${x.count||0} soal berhasil dihapus.`);await loadSoal(k)}catch(e){alert(e.message)}}
 async function addQuestion(k){const box=document.createElement("div");box.className="card";box.style="position:fixed;inset:5% 8%;z-index:9;overflow:auto";box.innerHTML=`<h3>Tambah Soal</h3><div class="field"><label>Nomor</label><input id="no" type="number"></div><div class="field"><label>Soal</label><textarea id="q" rows="4"></textarea></div><div class="field"><label>URL gambar soal</label><input id="qi"></div>${["A","B","C","D","E"].map(x=>`<div class="field"><label>Pilihan ${x}</label><input id="${x}"><label>URL gambar ${x}</label><input id="${x}i"></div>`).join("")}<div class="field"><label>Kunci</label><select id="key">${["A","B","C","D","E"].map(x=>`<option>${x}</option>`).join("")}</select></div><button id="save">Simpan</button> <button onclick="this.closest('.card').remove()">Batal</button>`;document.body.appendChild(box);$("#save").onclick=async()=>{const d={kode_ujian:k,nomor:$("#no").value,soal:$("#q").value,gambar_soal:$("#qi").value,jawaban:$("#key").value,bobot:1};["A","B","C","D","E"].forEach(x=>{d[x]=$( "#"+x).value;d["gambar_"+x]=$( "#"+x+"i").value});try{await api("saveSoal",d);box.remove();loadSoal(k)}catch(e){alert(e.message)}}}
 function analysis(c,k,seq){
-  // Render the analysis shell immediately. Do not let a stale navigation sequence
-  // leave the parent page's loading card visible.
-  c.innerHTML=`<div class="card"><div class="top"><div><h3>Analisis Soal Otomatis</h3><div class="muted">Lihat hasil berdasarkan peserta yang benar-benar mengerjakan ujian.</div></div></div><div class="field"><label>Pilih ujian</label><select id="sel"><option value="">Memuat daftar ujian…</option></select></div><div id="an"><div class="notice">Pilih ujian untuk memuat analisis.</div></div></div>`;
-  const sel=$("#sel"), an=$("#an");
+  if(!c)return;
+  c.innerHTML=`<div class="card"><div class="top"><div><h3>Analisis Soal Otomatis</h3><div class="muted">Lihat hasil berdasarkan peserta yang benar-benar mengerjakan ujian.</div></div></div><div class="field"><label>Pilih ujian</label><select id="analysisExamSelect"><option value="">Memuat daftar ujian…</option></select></div><div id="analysisBox"><div class="notice">Menyiapkan analisis…</div></div></div>`;
+  const sel=document.querySelector('#analysisExamSelect'), an=document.querySelector('#analysisBox');
+  if(!sel||!an)return;
   const fill=(u)=>{
-    if(!sel)return;
-    const rows=(u&&u.data)||[];
-    sel.innerHTML=`<option value="">Pilih ujian</option>${rows.map(x=>`<option value="${esc(x.kode_ujian)}">${esc(x.nama)} (${esc(x.kode_ujian)})</option>`).join("")}`;
+    if(seq!==navSeq)return;
+    const rows=Array.isArray(u?.data)?u.data:[];
+    if(!rows.length){
+      sel.innerHTML='<option value="">Tidak ada ujian</option>';
+      an.innerHTML='<div class="notice">Belum ada ujian yang dapat dianalisis untuk akun ini.</div>';
+      return;
+    }
+    sel.innerHTML=`<option value="">Pilih ujian</option>${rows.map(x=>`<option value="${esc(x.kode_ujian)}">${esc(x.nama||'Ujian')} (${esc(x.kode_ujian)})</option>`).join('')}`;
     sel.onchange=()=>openAnalysis(sel.value);
-    if(k && rows.some(x=>String(x.kode_ujian)===String(k))){sel.value=k;openAnalysis(k);}
-    else if(rows.length===1){sel.value=rows[0].kode_ujian;openAnalysis(rows[0].kode_ujian);}
+    const wanted=k&&rows.find(x=>String(x.kode_ujian)===String(k));
+    const chosen=wanted||((rows.length===1)?rows[0]:null);
+    if(chosen){sel.value=chosen.kode_ujian;openAnalysis(chosen.kode_ujian);}
+    else an.innerHTML='<div class="notice">Silakan pilih ujian untuk melihat analisis.</div>';
   };
-  try{const saved=JSON.parse(localStorage.getItem("cbt_cache_listUjian")||"null");if(saved&&saved.data)fill(saved.data)}catch(_){}
-  cached("listUjian").then(fill).catch(e=>{if(sel)sel.innerHTML='<option value="">Gagal memuat ujian</option>';if(an)an.innerHTML=`<div class="notice error-notice">${esc(e.message)}</div>`});
+  cached('listUjian').then(fill).catch(e=>{
+    if(seq!==navSeq)return;
+    sel.innerHTML='<option value="">Gagal memuat ujian</option>';
+    an.innerHTML=`<div class="notice error-notice"><b>Gagal memuat daftar ujian.</b><br>${esc(e.message)}<br><button class="secondary" style="margin-top:12px" onclick="page('Analisis Soal')">Coba lagi</button></div>`;
+  });
 }
 async function openAnalysis(k){
   const sel=$("#sel"), an=$("#an");
