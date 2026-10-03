@@ -160,6 +160,15 @@ try{
  renderExam();
 }catch(e){alert(e.message)}
 }
+function imageUrl(url){
+ const u=String(url||"").trim();
+ if(!u)return "";
+ let m=u.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
+ if(m)return `https://drive.google.com/thumbnail?id=${encodeURIComponent(m[1])}&sz=w1600`;
+ m=u.match(/[?&]id=([^&]+)/i);
+ if(/drive\.google\.com/i.test(u)&&m)return `https://drive.google.com/thumbnail?id=${encodeURIComponent(m[1])}&sz=w1600`;
+ return u;
+}
 function renderExam(){
  clearInterval(timerId);
  const e=examState,q=e.soal[e.idx],answered=Object.keys(e.answers).length;
@@ -174,8 +183,8 @@ function renderExam(){
     <div class="question-head"><span>Soal ${e.idx+1} dari ${e.soal.length}</span><span>${answered} sudah dijawab</span></div>
     <div class="question-card">
       <div class="question-text">${esc(q.soal)}</div>
-      ${q.gambar_soal?`<img class="qimg" src="${esc(q.gambar_soal)}" onerror="this.style.display='none'">`:""}
-      <div class="choices">${letters.map(k=>q[k]?`<button class="choice ${e.answers[q.nomor]===k?"selected":""}" onclick="answer('${k}')"><span class="choice-letter">${k}</span><span class="choice-body">${esc(q[k])}${q["gambar_"+k]?`<img src="${esc(q["gambar_"+k])}" onerror="this.style.display='none'">`:""}</span></button>`:"").join("")}</div>
+      ${q.gambar_soal?`<img class="qimg" src="${esc(imageUrl(q.gambar_soal))}" onerror="this.style.display='none'">`:""}
+      <div class="choices">${letters.map(k=>q[k]?`<button class="choice ${e.answers[q.nomor]===k?"selected":""}" onclick="answer('${k}')"><span class="choice-letter">${k}</span><span class="choice-body">${esc(q[k])}${q["gambar_"+k]?`<img src="${esc(imageUrl(q["gambar_"+k]))}" onerror="this.style.display='none'">`:""}</span></button>`:"").join("")}</div>
     </div>
     <div class="cbt-actions">
       <button class="secondary" onclick="prevQ()" ${e.idx===0?"disabled":""}>‹ Sebelumnya</button>
@@ -264,14 +273,17 @@ async function uploadSoalBanyak(input){
   if(!matrix||matrix.length<2)throw new Error("File tidak berisi data soal.");
   const headers=matrix[0].map(v=>String(v||"").trim().toLowerCase());
   const idx=n=>headers.indexOf(n);
-  const required=["soal","A","B","C","D","E","jawaban"].filter(n=>idx(n)<0);
+  const required=["soal","A","B","C","D","jawaban"].filter(n=>idx(n)<0);
   if(required.length)throw new Error("Kolom wajib belum ada: "+required.join(", "));
   const rows=matrix.slice(1).filter(r=>String(r[idx("soal")]||"").trim()).map((r,i)=>{
    const g=n=>idx(n)>=0?String(r[idx(n)]??"").trim():"";
-   return {id:g("id"),kode_ujian:kode,nomor:g("nomor")||String(i+1),soal:g("soal"),gambar_soal:g("gambar_soal"),A:g("A"),gambar_A:g("gambar_A"),B:g("B"),gambar_B:g("gambar_B"),C:g("C"),gambar_C:g("gambar_C"),D:g("D"),gambar_D:g("gambar_D"),E:g("E"),gambar_E:g("gambar_E"),jawaban:g("jawaban").toUpperCase(),bobot:Number(g("bobot"))||1};
+   return {id:g("id"),kode_ujian:kode,nomor:g("nomor")||String(i+1),soal:g("soal"),gambar_soal:imageUrl(g("gambar_soal")),A:g("A"),gambar_A:imageUrl(g("gambar_A")),B:g("B"),gambar_B:imageUrl(g("gambar_B")),C:g("C"),gambar_C:imageUrl(g("gambar_C")),D:g("D"),gambar_D:imageUrl(g("gambar_D")),E:g("E"),gambar_E:imageUrl(g("gambar_E")),jawaban:g("jawaban").toUpperCase(),bobot:Number(g("bobot"))||1};
   });
-  const bad=rows.findIndex(r=>!/[ABCDE]/.test(r.jawaban));
-  if(bad>=0)throw new Error(`Kunci jawaban baris ${bad+2} harus A, B, C, D, atau E.`);
+  const bad=rows.findIndex(r=>{
+   const opts=["A","B","C","D","E"].filter(k=>String(r[k]||"").trim());
+   return !opts.includes(r.jawaban);
+  });
+  if(bad>=0)throw new Error(`Kunci jawaban baris ${bad+2} tidak sesuai pilihan yang terisi. A-D wajib; E opsional.`);
   const box=document.createElement("div");box.className="modal";box.innerHTML=`<div class="modal-box card"><h3>Upload Soal Banyak</h3><p id="bulkStatus">Menyiapkan ${rows.length} soal…</p><div class="progress"><div id="bulkBar" style="width:0%"></div></div><button id="bulkClose" style="display:none" onclick="this.closest('.modal').remove()">Tutup</button></div>`;document.body.appendChild(box);
   const status=$("#bulkStatus"),bar=$("#bulkBar");
   const batch=40;let done=0;
@@ -283,15 +295,32 @@ async function uploadSoalBanyak(input){
 function showImportGuide(){
  const box=document.createElement("div");box.className="modal";
  box.innerHTML=`<div class="modal-box card"><h3>Import Soal Massal</h3>
- <p>Gunakan template Excel. Satu baris = satu soal. Kolom gambar diisi URL gambar yang dapat diakses browser.</p>
+ <p>Gunakan template Excel. Satu baris = satu soal. Kolom gambar bisa diisi URL gambar biasa atau link Google Drive.</p>
  <pre>kode_ujian | nomor | soal | gambar_soal | A | gambar_A | B | gambar_B | C | gambar_C | D | gambar_D | E | gambar_E | jawaban | bobot</pre>
- <ol><li>Download template.</li><li>Isi soal sebanyak yang diperlukan.</li><li>Pastikan kode_ujian sama dengan kode ujian.</li><li>Upload/salin data ke sheet <b>SOAL</b> pada Spreadsheet.</li><li>Klik refresh Bank Soal.</li></ol>
- <div class="notice">Jika Excel berisi URL gambar publik, gambar akan tampil otomatis saat ujian.</div>
+ <ol><li>Download template.</li><li>Isi soal sebanyak yang diperlukan.</li><li>Pastikan kode_ujian sama dengan kode ujian.</li><li>Pilihan A, B, C, D wajib. Pilihan E boleh dikosongkan.</li><li>Untuk gambar Google Drive, setel akses file menjadi <b>Anyone with the link / Siapa saja yang memiliki link: Viewer</b>, lalu tempel link Drive ke kolom gambar.</li><li>Upload/salin data ke sheet <b>SOAL</b> pada Spreadsheet.</li><li>Klik refresh Bank Soal.</li></ol>
+ <div class="notice">Link Google Drive seperti https://drive.google.com/file/d/FILE_ID/view akan otomatis diubah menjadi link tampilan gambar. File Drive harus bisa dilihat oleh peserta.</div>
  <button onclick="this.closest('.modal').remove()">Tutup</button></div>`;
  document.body.appendChild(box);
 }
-function downloadSoalTemplate(){
- const csv=`id,kode_ujian,nomor,soal,gambar_soal,A,gambar_A,B,gambar_B,C,gambar_C,D,gambar_D,E,gambar_E,jawaban,bobot\\n,CONTOH001,1,Contoh soal,,Pilihan A,,Pilihan B,,Pilihan C,,Pilihan D,,Pilihan E,,A,1\\n`;
- const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="template-soal-cbt.csv";a.click();URL.revokeObjectURL(a.href);
+async function downloadSoalTemplate(){
+ try{
+  const XLSX=await loadXLSX();
+  const headers=["id","kode_ujian","nomor","soal","gambar_soal","A","gambar_A","B","gambar_B","C","gambar_C","D","gambar_D","E","gambar_E","jawaban","bobot"];
+  const sample=["","CONTOH001",1,"Contoh soal","","Pilihan A","","Pilihan B","","Pilihan C","","Pilihan D","","","","A",1];
+  const ws=XLSX.utils.aoa_to_sheet([headers,sample]);
+  ws["!cols"]=headers.map(h=>({wch:h.length<12?16:26}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"SOAL");
+  const guide=XLSX.utils.aoa_to_sheet([
+   ["PETUNJUK PENGISIAN TEMPLATE SOAL CBT"],
+   ["Kolom wajib: soal, A, B, C, D, jawaban. E opsional."],
+   ["jawaban harus sesuai pilihan yang diisi: A-D, atau A-E jika E digunakan"],
+   ["kode_ujian boleh dikosongkan karena otomatis mengikuti ujian yang dipilih di aplikasi"],
+   ["gambar_soal dan gambar_A sampai gambar_E dapat diisi URL biasa atau link Google Drive"],
+   ["Google Drive: setel akses file ke Anyone with the link / Viewer agar peserta dapat melihat gambar"],
+   ["nomor dan bobot boleh dikosongkan; sistem akan memberi nilai default"]
+  ]);
+  guide["!cols"]=[{wch:110}]; XLSX.utils.book_append_sheet(wb,guide,"PETUNJUK");
+  XLSX.writeFile(wb,"template-soal-cbt.xlsx");
+ }catch(e){alert("Template Excel gagal dibuat: "+e.message)}
 }
 render();
