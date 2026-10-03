@@ -173,3 +173,14 @@ button{transition:.18s ease;box-shadow:0 1px 1px #0000000a}button:hover{transfor
 .login-panel{min-height:100vh;height:100%;}
 @media(max-width:900px){.login{height:auto;min-height:100vh;grid-template-columns:1fr;}.login-art{min-height:52vh;height:auto;padding:40px 28px;}.login-panel{min-height:auto;height:auto;padding:35px 22px;}.hero-copy{margin:60px 0 20px}.hero-copy h1{font-size:42px;}}
 .qimg{display:block;max-width:min(100%,900px);max-height:520px;width:auto;height:auto;object-fit:contain;margin:18px auto;border-radius:12px}.choice-body img{display:block;max-width:min(100%,360px);max-height:220px;width:auto;height:auto;object-fit:contain;margin-top:10px;border-radius:10px}
+
+
+/* V11 bulk Excel validation */
+.bulk-preview-box{width:min(980px,calc(100vw - 28px));max-height:88vh;overflow:auto}
+.bulk-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+.bulk-summary>div{padding:14px;border:1px solid rgba(100,116,139,.18);border-radius:14px;background:rgba(148,163,184,.08);text-align:center}
+.bulk-summary b{display:block;font-size:24px}.bulk-summary span{font-size:12px;opacity:.7}
+.bulk-table-wrap{overflow:auto;margin:14px 0;border:1px solid rgba(100,116,139,.18);border-radius:12px}
+.bulk-table{width:100%;border-collapse:collapse;font-size:13px;min-width:700px}.bulk-table th,.bulk-table td{padding:10px;border-bottom:1px solid rgba(100,116,139,.14);text-align:left}.bulk-table th{font-weight:700;white-space:nowrap}
+.bulk-preview-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+@media(max-width:700px){.bulk-summary{grid-template-columns:repeat(2,1fr)}.bulk-preview-box{width:calc(100vw - 16px);max-height:92vh}}
