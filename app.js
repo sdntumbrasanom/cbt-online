@@ -261,6 +261,48 @@ function csvRows(text){
  if(cell!==""||row.length){row.push(cell);if(row.some(v=>String(v).trim()!==""))rows.push(row)}
  return rows;
 }
+function normalizeHeader(v){
+ return String(v??"").replace(/^\uFEFF/,"").trim().toLowerCase().replace(/\s+/g,"_");
+}
+function readBulkRows(matrix){
+ if(!Array.isArray(matrix)||matrix.length<2) throw new Error("File tidak berisi data soal.");
+ const rawHeaders=matrix[0]||[];
+ const headers=rawHeaders.map(normalizeHeader);
+ const idx=n=>headers.indexOf(normalizeHeader(n));
+ const required=["soal","A","B","C","D","jawaban"];
+ const missing=required.filter(n=>idx(n)<0);
+ if(missing.length) throw new Error("Kolom wajib belum ada: "+missing.join(", "));
+ const duplicateHeaders=[];
+ headers.forEach((h,i)=>{if(h && headers.indexOf(h)!==i && !duplicateHeaders.includes(h))duplicateHeaders.push(h)});
+ if(duplicateHeaders.length) throw new Error("Header Excel duplikat: "+duplicateHeaders.join(", "));
+ const rows=[],errors=[];
+ matrix.slice(1).forEach((r,ri)=>{
+   const excelRow=ri+2;
+   const g=n=>{const j=idx(n);return j>=0?String(r[j]??"").trim():""};
+   const soal=g("soal");
+   if(!soal && !r.some(v=>String(v??"").trim())) return;
+   if(!soal){errors.push({row:excelRow,msg:"Kolom soal kosong."});return;}
+   const choices={A:g("A"),B:g("B"),C:g("C"),D:g("D"),E:g("E")};
+   const filled=["A","B","C","D","E"].filter(k=>choices[k]);
+   const missingChoices=["A","B","C","D"].filter(k=>!choices[k]);
+   if(missingChoices.length){errors.push({row:excelRow,msg:"Pilihan wajib kosong: "+missingChoices.join(", ")});return;}
+   let jawaban=g("jawaban").toUpperCase().replace(/[^A-E]/g,"");
+   if(!jawaban){errors.push({row:excelRow,msg:"Kunci jawaban kosong."});return;}
+   if(!filled.includes(jawaban)){errors.push({row:excelRow,msg:`Kunci jawaban ${jawaban} tidak sesuai pilihan yang terisi.`});return;}
+   const bobotRaw=g("bobot");
+   const bobot=Number(bobotRaw);
+   rows.push({
+     id:g("id"),kode_ujian:g("kode_ujian"),nomor:g("nomor")||String(rows.length+1),
+     soal,gambar_soal:imageUrl(g("gambar_soal")),
+     A:choices.A,gambar_A:imageUrl(g("gambar_A")),B:choices.B,gambar_B:imageUrl(g("gambar_B")),
+     C:choices.C,gambar_C:imageUrl(g("gambar_C")),D:choices.D,gambar_D:imageUrl(g("gambar_D")),
+     E:choices.E,gambar_E:imageUrl(g("gambar_E")),jawaban,bobot:(Number.isFinite(bobot)&&bobot>0)?bobot:1,
+     _excelRow:excelRow,_hasE:!!choices.E
+   });
+ });
+ return {rows,errors,headers};
+}
+function closeBulkPreview(){document.getElementById("bulkPreviewModal")?.remove()}
 async function uploadSoalBanyak(input){
  const file=input.files&&input.files[0]; input.value="";
  if(!file)return;
@@ -270,32 +312,41 @@ async function uploadSoalBanyak(input){
   let matrix;
   if(/\.csv$/i.test(file.name)) matrix=csvRows(await file.text());
   else {const XLSX=await loadXLSX();const data=await file.arrayBuffer();const wb=XLSX.read(data,{type:"array"});const ws=wb.Sheets[wb.SheetNames[0]];matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});}
-  if(!matrix||matrix.length<2)throw new Error("File tidak berisi data soal.");
-  const headers=matrix[0].map(v=>String(v||"").trim().toLowerCase());
-  const idx=n=>headers.indexOf(n);
-  const required=["soal","A","B","C","D","jawaban"].filter(n=>idx(n)<0);
-  if(required.length)throw new Error("Kolom wajib belum ada: "+required.join(", "));
-  const rows=matrix.slice(1).filter(r=>String(r[idx("soal")]||"").trim()).map((r,i)=>{
-   const g=n=>idx(n)>=0?String(r[idx(n)]??"").trim():"";
-   return {id:g("id"),kode_ujian:kode,nomor:g("nomor")||String(i+1),soal:g("soal"),gambar_soal:imageUrl(g("gambar_soal")),A:g("A"),gambar_A:imageUrl(g("gambar_A")),B:g("B"),gambar_B:imageUrl(g("gambar_B")),C:g("C"),gambar_C:imageUrl(g("gambar_C")),D:g("D"),gambar_D:imageUrl(g("gambar_D")),E:g("E"),gambar_E:imageUrl(g("gambar_E")),jawaban:g("jawaban").toUpperCase(),bobot:Number(g("bobot"))||1};
-  });
-  const bad=rows.findIndex(r=>{
-   const opts=["A","B","C","D","E"].filter(k=>String(r[k]||"").trim());
-   return !opts.includes(r.jawaban);
-  });
-  if(bad>=0)throw new Error(`Kunci jawaban baris ${bad+2} tidak sesuai pilihan yang terisi. A-D wajib; E opsional.`);
-  const box=document.createElement("div");box.className="modal";box.innerHTML=`<div class="modal-box card"><h3>Upload Soal Banyak</h3><p id="bulkStatus">Menyiapkan ${rows.length} soal…</p><div class="progress"><div id="bulkBar" style="width:0%"></div></div><button id="bulkClose" style="display:none" onclick="this.closest('.modal').remove()">Tutup</button></div>`;document.body.appendChild(box);
-  const status=$("#bulkStatus"),bar=$("#bulkBar");
-  const batch=40;let done=0;
-  for(let i=0;i<rows.length;i+=batch){const part=rows.slice(i,i+batch);const x=await api("importSoal",{kode_ujian:kode,rows:part});done+=part.length;const pct=Math.round(done/rows.length*100);status.textContent=`Mengupload ${done} dari ${rows.length} soal…`;bar.style.width=pct+"%";}
-  status.textContent=`✓ Berhasil mengupload ${rows.length} soal.`;$("#bulkClose").style.display="inline-flex";invalidate("listUjian");await loadSoal(kode);
+  const parsed=readBulkRows(matrix);
+  if(!parsed.rows.length)throw new Error("Tidak ada baris soal yang bisa diimpor.");
+  if(parsed.errors.length){
+    const sample=parsed.errors.slice(0,12).map(x=>`Baris ${x.row}: ${x.msg}`).join("\n");
+    throw new Error(`Ada ${parsed.errors.length} baris bermasalah.\n\n${sample}${parsed.errors.length>12?"\n…dan lainnya.":""}`);
+  }
+  const total=parsed.rows.length;
+  const withE=parsed.rows.filter(r=>r._hasE).length;
+  const withImages=parsed.rows.filter(r=>r.gambar_soal||r.gambar_A||r.gambar_B||r.gambar_C||r.gambar_D||r.gambar_E).length;
+  const previewRows=parsed.rows.slice(0,8).map(r=>`<tr><td>${r._excelRow}</td><td>${esc(r.nomor)}</td><td>${esc(r.soal).slice(0,90)}</td><td>${r._hasE?"A–E":"A–D"}</td><td>${esc(r.jawaban)}</td><td>${(r.gambar_soal||r.gambar_A||r.gambar_B||r.gambar_C||r.gambar_D||r.gambar_E)?"✓":"–"}</td></tr>`).join("");
+  const box=document.createElement("div");box.id="bulkPreviewModal";box.className="modal";
+  box.innerHTML=`<div class="modal-box card bulk-preview-box"><div class="top"><div><h3>Validasi Import Excel</h3><div class="muted">File: ${esc(file.name)}</div></div><button class="secondary" onclick="closeBulkPreview()">Tutup</button></div>
+   <div class="bulk-summary"><div><b>${total}</b><span>soal valid</span></div><div><b>${total-withE}</b><span>A–D</span></div><div><b>${withE}</b><span>A–E</span></div><div><b>${withImages}</b><span>ada gambar</span></div></div>
+   <div class="notice">Ujian tujuan: <b>${esc(kode)}</b>. Kolom <b>id</b>, <b>kode_ujian</b>, dan <b>nomor</b> boleh dikosongkan. Sistem akan mengikuti ujian yang dipilih.</div>
+   <div class="bulk-table-wrap"><table class="bulk-table"><thead><tr><th>Baris</th><th>No</th><th>Soal</th><th>Pilihan</th><th>Kunci</th><th>Gambar</th></tr></thead><tbody>${previewRows}</tbody></table></div>
+   ${total>8?`<div class="muted">Menampilkan 8 dari ${total} soal. Semua ${total} soal sudah lolos validasi.</div>`:""}
+   <div class="bulk-preview-actions"><button class="secondary" onclick="closeBulkPreview()">Batal</button><button id="confirmBulkUpload">✓ Upload ${total} Soal</button></div></div>`;
+  document.body.appendChild(box);
+  $("#confirmBulkUpload").onclick=async()=>{
+    const btn=$("#confirmBulkUpload");btn.disabled=true;btn.textContent="Menyiapkan upload…";
+    try{
+      const rows=parsed.rows.map(({_excelRow,_hasE,...r})=>r);
+      box.remove();
+      const progress=document.createElement("div");progress.className="modal";progress.innerHTML=`<div class="modal-box card"><h3>Upload Soal Banyak</h3><p id="bulkStatus">Menyiapkan ${rows.length} soal…</p><div class="progress"><div id="bulkBar" style="width:0%"></div></div><button id="bulkClose" style="display:none" onclick="this.closest('.modal').remove()">Tutup</button></div>`;document.body.appendChild(progress);
+      const status=$("#bulkStatus"),bar=$("#bulkBar"),batch=40;let done=0;
+      for(let i=0;i<rows.length;i+=batch){const part=rows.slice(i,i+batch);await api("importSoal",{kode_ujian:kode,rows:part});done+=part.length;const pct=Math.round(done/rows.length*100);status.textContent=`Mengupload ${done} dari ${rows.length} soal…`;bar.style.width=pct+"%";}
+      status.textContent=`✓ Berhasil mengupload ${rows.length} soal.`;$("#bulkClose").style.display="inline-flex";invalidate("listUjian");await loadSoal(kode);
+    }catch(e){box.remove();alert("Upload gagal: "+e.message)}
+  };
  }catch(e){alert(e.message)}
 }
-
 function showImportGuide(){
  const box=document.createElement("div");box.className="modal";
  box.innerHTML=`<div class="modal-box card"><h3>Import Soal Massal</h3>
- <p>Gunakan template Excel. Satu baris = satu soal. Kolom gambar bisa diisi URL gambar biasa atau link Google Drive.</p>
+ <p>Gunakan template Excel. Satu baris = satu soal. Sistem akan memvalidasi seluruh baris terlebih dahulu sebelum upload. Kolom gambar bisa diisi URL gambar biasa atau link Google Drive.</p>
  <pre>kode_ujian | nomor | soal | gambar_soal | A | gambar_A | B | gambar_B | C | gambar_C | D | gambar_D | E | gambar_E | jawaban | bobot</pre>
  <ol><li>Download template.</li><li>Isi soal sebanyak yang diperlukan.</li><li>Pastikan kode_ujian sama dengan kode ujian.</li><li>Pilihan A, B, C, D wajib. Pilihan E boleh dikosongkan.</li><li>Untuk gambar Google Drive, setel akses file menjadi <b>Anyone with the link / Siapa saja yang memiliki link: Viewer</b>, lalu tempel link Drive ke kolom gambar.</li><li>Upload/salin data ke sheet <b>SOAL</b> pada Spreadsheet.</li><li>Klik refresh Bank Soal.</li></ol>
  <div class="notice">Link Google Drive seperti https://drive.google.com/file/d/FILE_ID/view akan otomatis diubah menjadi link tampilan gambar. File Drive harus bisa dilihat oleh peserta.</div>
