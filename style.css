@@ -184,3 +184,21 @@ button{transition:.18s ease;box-shadow:0 1px 1px #0000000a}button:hover{transfor
 .bulk-table{width:100%;border-collapse:collapse;font-size:13px;min-width:700px}.bulk-table th,.bulk-table td{padding:10px;border-bottom:1px solid rgba(100,116,139,.14);text-align:left}.bulk-table th{font-weight:700;white-space:nowrap}
 .bulk-preview-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
 @media(max-width:700px){.bulk-summary{grid-template-columns:repeat(2,1fr)}.bulk-preview-box{width:calc(100vw - 16px);max-height:92vh}}
+
+
+/* V12: proportional exam modal + question delete controls */
+.modal-card{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(720px,calc(100vw - 36px));max-height:min(88vh,760px);z-index:50;background:#fff;border:1px solid #e7eaf1;border-radius:18px;box-shadow:0 28px 90px #17203333;display:flex;flex-direction:column;overflow:hidden}
+.modal-card:before{content:"";position:fixed;inset:0;background:#11182766;z-index:-1;pointer-events:none}
+.exam-modal{width:min(680px,calc(100vw - 32px))}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:22px 24px 15px;border-bottom:1px solid #eef1f5;flex:none}
+.modal-head h3{margin:0;font-size:20px}
+.modal-close{width:34px;height:34px;padding:0;border-radius:9px;background:#f1f5f9;color:#64748b;font-size:22px;line-height:1}
+.modal-close:hover{background:#e2e8f0}
+.modal-body{padding:18px 24px;overflow:auto;min-height:0}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;background:#fff;border-top:1px solid #eef1f5;flex:none}
+.modal-actions button{min-width:112px;padding:11px 20px;border-radius:10px}
+.soal-toolbar{align-items:center}
+.soal-table td:last-child{width:90px;text-align:right}
+.small-danger{padding:7px 10px!important;font-size:11px!important}
+.image-pill{display:inline-block;margin-left:8px;font-size:9px;padding:4px 7px}
+@media(max-width:700px){.modal-card,.exam-modal{width:calc(100vw - 20px);max-height:92vh}.modal-head{padding:17px 18px 13px}.modal-body{padding:14px 18px}.modal-actions{padding:12px 18px}.modal-actions button{flex:1}.soal-toolbar{align-items:flex-start;flex-direction:column}.soal-toolbar .actions{width:100%;justify-content:flex-start;flex-wrap:wrap}.soal-toolbar .actions button{flex:1}}
