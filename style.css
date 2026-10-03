@@ -172,3 +172,4 @@ button{transition:.18s ease;box-shadow:0 1px 1px #0000000a}button:hover{transfor
 .login-art{min-height:100vh;height:100%;align-self:stretch;}
 .login-panel{min-height:100vh;height:100%;}
 @media(max-width:900px){.login{height:auto;min-height:100vh;grid-template-columns:1fr;}.login-art{min-height:52vh;height:auto;padding:40px 28px;}.login-panel{min-height:auto;height:auto;padding:35px 22px;}.hero-copy{margin:60px 0 20px}.hero-copy h1{font-size:42px;}}
+.qimg{display:block;max-width:min(100%,900px);max-height:520px;width:auto;height:auto;object-fit:contain;margin:18px auto;border-radius:12px}.choice-body img{display:block;max-width:min(100%,360px);max-height:220px;width:auto;height:auto;object-fit:contain;margin-top:10px;border-radius:10px}
