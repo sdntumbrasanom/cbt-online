@@ -178,7 +178,6 @@ async function renderStudent(){
 const savedName=session.nama||"";
 app.innerHTML=`<div class="student-home"><div class="student-card card" style="max-width:460px;margin:24px auto">
   <div class="brand-row"><div><div class="logo">CBT Online</div><div class="muted">Konfirmasi Data Peserta</div></div><button onclick="logout()" class="secondary">Keluar</button></div>
-  <div class="field"><label>KODE SISWA</label><input value="${esc(session.username||session.nis||session.id||"")}" readonly></div>
   <div class="field"><label>NAMA PESERTA TERDAFTAR</label><input value="${esc(savedName)}" readonly></div>
   <div class="field"><label>JENIS KELAMIN</label><select id="gender"><option value="">Pilih jenis kelamin</option><option>Laki-Laki</option><option>Perempuan</option></select></div>
   <div class="field"><label>MATA UJIAN</label><div class="muted" style="padding:8px 0">Mata ujian akan ditentukan berdasarkan token yang dimasukkan.</div></div>
