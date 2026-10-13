@@ -190,7 +190,34 @@ app.innerHTML=`<div class="student-home"><div class="student-card card" style="m
 $("#go").onclick=async()=>{
  const btn=$("#go"),msg=$("#studentMsg"),nama=$("#fullName").value.trim(),day=$("#birthDay").value,month=$("#birthMonth").value,year=$("#birthYear").value,token=$("#examToken").value.trim(),gender=$("#gender").value;
  if(!nama||!day||!month||!year||!token){msg.style.display="block";msg.textContent="Nama lengkap, tanggal lahir, dan token wajib diisi.";return}
- const tanggal_lahir=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+ 
+btn.disabled=true;
+btn.textContent="Memvalidasi data…";
+msg.style.display="none";
+
+try {
+  const v = await api("verifyParticipant", {
+    nama_lengkap: nama,
+    hari: day,
+    bulan: month,
+    tahun: year,
+    token: token
+  });
+
+  session.nama = session.nama || nama;
+  session.exam_token = token;
+  localStorage.setItem("cbt_session", JSON.stringify(session));
+
+  await startExam(v.kode_ujian);
+
+} catch(e) {
+  msg.style.display="block";
+  msg.textContent=e.message;
+  btn.disabled=false;
+  btn.textContent="Submit";
+}
+};
+
  btn.disabled=true;btn.textContent="Memvalidasi data…";msg.style.display="none";
  try{const v=await api("verifyParticipant",{nama,tanggal_lahir,token,jenis_kelamin:gender});session.nama=v.siswa.nama;session.exam_token=token;localStorage.setItem("cbt_session",JSON.stringify(session));await startExam(v.kode_ujian)}catch(e){msg.style.display="block";msg.textContent=e.message;btn.disabled=false;btn.textContent="Submit"}
 };
