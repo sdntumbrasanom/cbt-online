@@ -174,54 +174,105 @@ async function openAnalysis(k){
 }
 async function renderAnalysis(x){const a=document.querySelector("#analysisBox");if(!a)return;if(!x||!x.summary){a.innerHTML='<div class="notice error-notice">Data analisis tidak lengkap.</div>';return}a.innerHTML=`<div class="actions" style="justify-content:flex-end;margin-bottom:14px"><button onclick="downloadAnalysisExcel()">⇩ Download Analisis Excel</button></div><div class="grid"><div class="card stat">Peserta<strong>${x.summary.peserta}</strong></div><div class="card stat">Selesai<strong>${x.summary.selesai}</strong></div><div class="card stat">Rata-rata<strong>${x.summary.rata2}</strong></div><div class="card stat">Tertinggi<strong>${x.summary.tertinggi}</strong></div><div class="card stat">Terendah<strong>${x.summary.terendah}</strong></div></div><br>${(x.detail||[]).length?`<table class="table"><tr><th>No</th><th>Benar</th><th>Salah</th><th>Kosong</th><th>% Benar</th><th>Tingkat</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr>${x.detail.map(d=>`<tr><td>${esc(d.nomor)}</td><td>${d.benar}</td><td>${d.salah}</td><td>${d.kosong}</td><td>${d.persen_benar}%</td><td><span class="pill">${esc(d.tingkat)}</span></td><td>${d.pilihan.A}</td><td>${d.pilihan.B}</td><td>${d.pilihan.C}</td><td>${d.pilihan.D}</td><td>${d.pilihan.E}</td></tr>`).join("")}</table>`:'<div class="notice">Belum ada data jawaban untuk ujian ini.</div>'}`}
 async function results(c,seq){const u=await cached("listUjian");if(seq!==navSeq)return;c.innerHTML=`<div class="card"><div class="top"><div><h3>Hasil Ujian</h3><div class="muted">Rekap nilai peserta yang telah mengerjakan ujian.</div></div><button id="downloadResultsBtn" disabled onclick="downloadResultsExcel()">⇩ Download Rekap Excel</button></div><div class="field"><select id="resultExamSelect"><option value="">Pilih ujian</option>${u.data.map(x=>`<option value="${esc(x.kode_ujian)}">${esc(x.nama)} (${esc(x.kode_ujian)})</option>`).join("")}</select></div><div id="rs"></div></div>`;document.querySelector("#resultExamSelect").onchange=async()=>{const k=document.querySelector("#resultExamSelect").value;const btn=document.querySelector("#downloadResultsBtn");if(btn)btn.disabled=!k;const rs=document.querySelector("#rs");if(!k){rs.innerHTML="";return}rs.innerHTML=`<div class="page-loading" style="min-height:120px"><div class="loading-spinner"></div><b>Memuat hasil…</b></div>`;try{const x=await api("results",{kode_ujian:k});window._lastResults={kode:k,data:x.data||[]};rs.innerHTML=`${x.data&&x.data.length?`<table class="table"><tr><th>Nama</th><th>Benar</th><th>Salah</th><th>Kosong</th><th>Nilai</th><th>Status</th></tr>${x.data.map(d=>`<tr><td>${esc(d.nama)}</td><td>${d.benar}</td><td>${d.salah}</td><td>${d.kosong}</td><td><b>${d.nilai}</b></td><td>${esc(d.status)}</td></tr>`).join("")}</table>`:`<div class="notice">Belum ada hasil untuk ujian ini.</div>`}`;}catch(e){rs.innerHTML=`<div class="notice error-notice">${esc(e.message)}</div>`}}}
-async function renderStudent(){
-const savedName=session.nama||"";
-app.innerHTML=`<div class="student-home"><div class="student-card card" style="max-width:460px;margin:24px auto">
-  <div class="brand-row"><div><div class="logo">CBT Online</div><div class="muted">Konfirmasi Data Peserta</div></div><button onclick="logout()" class="secondary">Keluar</button></div>
-  <div class="field"><label>USERNAME TERDAFTAR</label><input value="${esc(savedName)}" readonly></div>
-  <div class="field"><label>JENIS KELAMIN</label><select id="gender"><option value="">Pilih jenis kelamin</option><option>Laki-Laki</option><option>Perempuan</option></select></div>
-  <div class="field"><label>MATA UJIAN</label><div class="muted" style="padding:8px 0">Mata ujian akan ditentukan berdasarkan token yang dimasukkan.</div></div>
-  <div class="field"><label>NAMA LENGKAP</label><input id="fullName" autocomplete="name" placeholder="Masukkan nama lengkap" value="${esc(savedName)}"></div>
-  <div class="field"><label>TANGGAL LAHIR</label><div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px"><select id="birthDay"><option value="">Hari</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("")}</select><select id="birthMonth"><option value="">Bulan</option>${["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"].map((m,i)=>`<option value="${i+1}">${m}</option>`).join("")}</select><select id="birthYear"><option value="">Tahun</option>${Array.from({length:25},(_,i)=>{const y=new Date().getFullYear()-5-i;return `<option value="${y}">${y}</option>`}).join("")}</select></div></div>
-  <div class="field"><label>TOKEN</label><input id="examToken" autocomplete="off" placeholder="Ketikkan token di sini"></div>
-  <div id="studentMsg" class="notice error-notice" style="display:none"></div>
-  <button id="go" class="wide">Submit</button>
-</div></div>`;
-$("#go").onclick=async()=>{
- const btn=$("#go"),msg=$("#studentMsg"),nama=$("#fullName").value.trim(),day=$("#birthDay").value,month=$("#birthMonth").value,year=$("#birthYear").value,token=$("#examToken").value.trim(),gender=$("#gender").value;
- if(!nama||!day||!month||!year||!token){msg.style.display="block";msg.textContent="Nama lengkap, tanggal lahir, dan token wajib diisi.";return}
- 
-btn.disabled=true;
-btn.textContent="Memvalidasi data…";
-msg.style.display="none";
 
-try {
-  const v = await api("verifyParticipant", {
-    nama_lengkap: nama,
-    hari: day,
-    bulan: month,
-    tahun: year,
-    token: token
-  });
+async function renderStudent() {
+  const savedName = session.nama || "";
 
-  session.nama = session.nama || nama;
-  session.exam_token = token;
-  localStorage.setItem("cbt_session", JSON.stringify(session));
+  app.innerHTML = `
+    <div class="student-home">
+      <div class="student-card card" style="max-width:460px;margin:24px auto">
+        <div class="brand-row">
+          <div>
+            <div class="logo">CBT Online</div>
+            <div class="muted">Konfirmasi Data Peserta</div>
+          </div>
+          <button id="studentLogout" class="secondary">Keluar</button>
+        </div>
 
-  await startExam(v.kode_ujian);
+        <div class="field">
+          <label>USERNAME TERDAFTAR</label>
+          <input value="${esc(savedName)}" readonly>
+        </div>
 
-} catch(e) {
-  msg.style.display="block";
-  msg.textContent=e.message;
-  btn.disabled=false;
-  btn.textContent="Submit";
+        <div class="field">
+          <label>NAMA LENGKAP</label>
+          <input id="fullName" value="${esc(savedName)}"
+            placeholder="Masukkan nama lengkap">
+        </div>
+
+        <div class="field">
+          <label>TANGGAL LAHIR</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px">
+            <select id="birthDay">
+              <option value="">Hari</option>
+              ${Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("")}
+            </select>
+            <select id="birthMonth">
+              <option value="">Bulan</option>
+              ${["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"].map((m,i)=>`<option value="${i+1}">${m}</option>`).join("")}
+            </select>
+            <select id="birthYear">
+              <option value="">Tahun</option>
+              ${Array.from({length:100},(_,i)=>{const y=new Date().getFullYear()-i;return `<option value="${y}">${y}</option>`}).join("")}
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>TOKEN UJIAN</label>
+          <input id="examToken" placeholder="Masukkan token ujian">
+        </div>
+
+        <div id="studentMsg" class="notice error-notice"
+          style="display:none"></div>
+        <button id="go" class="wide">Submit</button>
+      </div>
+    </div>
+  `;
+
+  document.querySelector("#studentLogout").onclick = logout;
+
+  document.querySelector("#go").onclick = async () => {
+    const btn = document.querySelector("#go");
+    const msg = document.querySelector("#studentMsg");
+    const nama = document.querySelector("#fullName").value.trim();
+    const hari = document.querySelector("#birthDay").value;
+    const bulan = document.querySelector("#birthMonth").value;
+    const tahun = document.querySelector("#birthYear").value;
+    const token = document.querySelector("#examToken").value.trim();
+
+    if (!nama || !hari || !bulan || !tahun || !token) {
+      msg.style.display = "block";
+      msg.textContent = "Nama lengkap, tanggal lahir, dan token wajib diisi.";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Memvalidasi data...";
+    msg.style.display = "none";
+
+    try {
+      const v = await api("verifyParticipant", {
+        nama_lengkap: nama,
+        hari: hari,
+        bulan: bulan,
+        tahun: tahun,
+        token: token
+      });
+
+      session.exam_token = token;
+      localStorage.setItem("cbt_session", JSON.stringify(session));
+
+      await startExam(v.kode_ujian);
+    } catch (e) {
+      msg.style.display = "block";
+      msg.textContent = e.message;
+      btn.disabled = false;
+      btn.textContent = "Submit";
+    }
+  };
 }
-};
 
- btn.disabled=true;btn.textContent="Memvalidasi data…";msg.style.display="none";
- try{const v=await api("verifyParticipant",{nama,tanggal_lahir,token,jenis_kelamin:gender});session.nama=v.siswa.nama;session.exam_token=token;localStorage.setItem("cbt_session",JSON.stringify(session));await startExam(v.kode_ujian)}catch(e){msg.style.display="block";msg.textContent=e.message;btn.disabled=false;btn.textContent="Submit"}
-};
-}
 async function startExam(code){
 try{
  const x=await api("getExam",{kode_ujian:code});
