@@ -274,11 +274,17 @@ async function renderStudent() {
 }
 
 async function startExam(code){
-try{
- const x=await api("getExam",{kode_ujian:code});
- examState={...x,idx:0,answers:{},start:new Date().toISOString(),remaining:Number(x.ujian.durasi_menit)*60,submitted:false};
- renderExam();
-}catch(e){alert(e.message)}
+  try{
+    const x=await api("getExam",{kode_ujian:code});
+    timerId=null; // ✅ reset state timer
+    examState={
+      ...x,idx:0,answers:{},
+      start:new Date().toISOString(),
+      remaining:Number(x.ujian.durasi_menit||60)*60, // ✅ default 60 menit
+      submitted:false
+    };
+    renderExam();
+  }catch(e){alert(e.message)}
 }
 function imageUrl(url){
  const u=String(url||"").trim();
@@ -290,36 +296,37 @@ function imageUrl(url){
  return u;
 }
 function renderExam(){
- clearInterval(timerId);
- const e=examState,q=e.soal[e.idx],answered=Object.keys(e.answers).length;
- const letters=["A","B","C","D","E"];
- app.innerHTML=`<div class="cbt-shell">
-  <header class="cbt-top">
-   <div class="cbt-title"><b>${esc(e.ujian.nama)}</b><span>${esc(session.nama)}</span></div>
-   <div class="cbt-timer"><small>Sisa waktu</small><strong id="timer">--:--</strong></div>
-  </header>
-  <div class="cbt-body">
-   <main class="cbt-main">
-    <div class="question-head"><span>Soal ${e.idx+1} dari ${e.soal.length}</span><span>${answered} sudah dijawab</span></div>
-    <div class="question-card">
-      <div class="question-text">${esc(q.soal)}</div>
-      ${q.gambar_soal?`<img class="qimg" src="${esc(imageUrl(q.gambar_soal))}" onerror="this.style.display='none'">`:""}
-      <div class="choices">${letters.map(k=>q[k]?`<button class="choice ${e.answers[q.nomor]===k?"selected":""}" onclick="answer('${k}')"><span class="choice-letter">${k}</span><span class="choice-body">${esc(q[k])}${q["gambar_"+k]?`<img src="${esc(imageUrl(q["gambar_"+k]))}" onerror="this.style.display='none'">`:""}</span></button>`:"").join("")}</div>
-    </div>
-    <div class="cbt-actions">
-      <button class="secondary" onclick="prevQ()" ${e.idx===0?"disabled":""}>‹ Sebelumnya</button>
-      <button class="secondary" onclick="clearAnswer()" ${e.answers[q.nomor]?"":"disabled"}>Hapus jawaban</button>
-      ${e.idx===e.soal.length-1?`<button onclick="confirmSubmit()">Selesai & Kirim</button>`:`<button onclick="nextQ()">Berikutnya ›</button>`}
-    </div>
-   </main>
-   <aside class="cbt-side">
-    <div class="side-card"><h3>Daftar Soal</h3><div class="legend"><span><i class="dot answered"></i> Dijawab</span><span><i class="dot current"></i> Saat ini</span><span><i class="dot empty"></i> Belum</span></div>
-    <div class="numbers">${e.soal.map((s,i)=>`<button class="${e.answers[s.nomor]?"done ":""}${i===e.idx?"current":""}" onclick="goQ(${i})">${i+1}</button>`).join("")}</div></div>
-    <div class="side-card summary"><div><span>Jumlah soal</span><b>${e.soal.length}</b></div><div><span>Dijawab</span><b>${answered}</b></div><div><span>Belum dijawab</span><b>${e.soal.length-answered}</b></div></div>
-   </aside>
-  </div>
- </div>`;
- startTimer();
+  // HAPUS: clearInterval(timerId);  ← ini penyebab timer reset
+  const e=examState,q=e.soal[e.idx],answered=Object.keys(e.answers).length;
+  const letters=["A","B","C","D","E"];
+  app.innerHTML=`<div class="cbt-shell">
+   <header class="cbt-top">
+    <div class="cbt-title"><b>${esc(e.ujian.nama)}</b><span>${esc(session.nama)}</span></div>
+    <div class="cbt-timer"><small>Sisa waktu</small><strong id="timer">--:--</strong></div>
+   </header>
+   <div class="cbt-body">
+    <main class="cbt-main">
+     <div class="question-head"><span>Soal ${e.idx+1} dari ${e.soal.length}</span><span>${answered} sudah dijawab</span></div>
+     <div class="question-card">
+       <div class="question-text">${esc(q.soal)}</div>
+       ${q.gambar_soal?`<img class="qimg" src="${esc(imageUrl(q.gambar_soal))}" onerror="this.style.display='none'">`:""}
+       <div class="choices">${letters.map(k=>q[k]?`<button class="choice ${e.answers[q.nomor]===k?"selected":""}" onclick="answer('${k}')"><span class="choice-letter">${k}</span><span class="choice-body">${esc(q[k])}${q["gambar_"+k]?`<img src="${esc(imageUrl(q["gambar_"+k]))}" onerror="this.style.display='none'">`:""}</span></button>`:"").join("")}</div>
+     </div>
+     <div class="cbt-actions">
+       <button class="secondary" onclick="prevQ()" ${e.idx===0?"disabled":""}>‹ Sebelumnya</button>
+       <button class="secondary" onclick="clearAnswer()" ${e.answers[q.nomor]?"":"disabled"}>Hapus jawaban</button>
+       ${e.idx===e.soal.length-1?`<button onclick="confirmSubmit()">Selesai & Kirim</button>`:`<button onclick="nextQ()">Berikutnya ›</button>`}
+     </div>
+    </main>
+    <aside class="cbt-side">
+     <div class="side-card"><h3>Daftar Soal</h3><div class="legend"><span><i class="dot answered"></i> Dijawab</span><span><i class="dot current"></i> Saat ini</span><span><i class="dot empty"></i> Belum</span></div>
+     <div class="numbers">${e.soal.map((s,i)=>`<button class="${e.answers[s.nomor]?"done ":""}${i===e.idx?"current":""}" onclick="goQ(${i})">${i+1}</button>`).join("")}</div></div>
+     <div class="side-card summary"><div><span>Jumlah soal</span><b>${e.soal.length}</b></div><div><span>Dijawab</span><b>${answered}</b></div><div><span>Belum dijawab</span><b>${e.soal.length-answered}</b></div></div>
+    </aside>
+   </div>
+  </div>`;
+  // ✅ Timer hanya dimulai sekali, tidak di-restart tiap render
+  if(!timerId) startTimer();
 }
 function startTimer(){
  clearInterval(timerId);
@@ -340,11 +347,19 @@ async function answer(k){
  try{await api("saveAnswer",{kode_ujian:examState.ujian.kode_ujian,nomor:q.nomor,jawaban:k})}catch(e){alert(e.message)}
  renderExam();
 }
+async function answer(k){
+  const q=examState.soal[examState.idx];
+  examState.answers[q.nomor]=k;
+  renderExam(); // ✅ Update UI dulu, baru sync ke server
+  try{await api("saveAnswer",{kode_ujian:examState.ujian.kode_ujian,nomor:q.nomor,jawaban:k})}
+  catch(e){console.warn("Autosave gagal:",e.message)}
+}
 async function clearAnswer(){
- const q=examState.soal[examState.idx]; delete examState.answers[q.nomor];
- // A blank answer is stored so the server can keep the autosave state consistent.
- try{await api("saveAnswer",{kode_ujian:examState.ujian.kode_ujian,nomor:q.nomor,jawaban:""})}catch(e){}
- renderExam();
+  const q=examState.soal[examState.idx];
+  delete examState.answers[q.nomor];
+  renderExam(); // ✅ UI dulu
+  try{await api("saveAnswer",{kode_ujian:examState.ujian.kode_ujian,nomor:q.nomor,jawaban:""})}
+  catch(e){console.warn("Autosave gagal:",e.message)}
 }
 function confirmSubmit(){
  const unanswered=examState.soal.length-Object.keys(examState.answers).length;
